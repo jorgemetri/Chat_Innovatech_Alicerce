@@ -1,6 +1,6 @@
 # Credenciais do Google Cloud Service Account
 ardent-curve-460514-b2-d89c379c10cf.json
-.streamlit/
+
 # Arquivos de ambiente virtual Python
 venv/
 *.venv/
