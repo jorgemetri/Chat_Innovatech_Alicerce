@@ -1,84 +1,84 @@
 import streamlit as st
-from oauth2client.service_account import ServiceAccountCredentials
+# from oauth2client.service_account import ServiceAccountCredentials # REMOVA ESTA LINHA
 import gspread
+from datetime import datetime # Adicionado para dados_para_enviar_exemplo
 
-# Defina os escopos necessários
-SCOPES = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive",
-]
+# SCOPES não é mais explicitamente necessário para service_account_from_dict com os escopos padrão
+# SCOPES = [
+#     "https://spreadsheets.google.com/feeds",
+#     "https://www.googleapis.com/auth/drive",
+# ]
 
 def get_gsheets_client():
     try:
-        # Isso irá carregar a seção [gsheets_creds] do secrets.toml como um dicionário
         creds_dict = st.secrets["gsheets_creds"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scopes=SCOPES)
-        client = gspread.authorize(creds)
+        # Usa o método mais moderno do gspread
+        client = gspread.service_account_from_dict(creds_dict)
         return client
     except KeyError:
         st.error("Configuração [gsheets_creds] não encontrada em .streamlit/secrets.toml. Verifique o arquivo.")
         return None
     except Exception as e:
-        st.error(f"Erro ao autenticar com Google Sheets: {e}")
+        st.error(f"Erro ao autenticar com Google Sheets usando service_account_from_dict: {e}")
         return None
 
 # --- Lógica do seu aplicativo Streamlit ---
-st.title("Teste de Envio para Google Sheets com st.secrets")
+st.title("Teste de Envio para Google Sheets com st.secrets (gspread moderno)")
 st.markdown("""
 Este aplicativo tenta se conectar à sua planilha do Google Sheets usando as credenciais definidas em
 `.streamlit/secrets.toml` e adicionar uma linha de dados de teste.
 """)
 
+# Seus dados de planilha
+SPREADSHEET_TITLE = "BaseDadosChat" 
+WORKSHEET_NAME = "Página1"
+# SPREADSHEET_ID = "1cUTbptS5QzFNMC3ClFIkupeyyxAfLIJ8HGkPSMCUq3Q" # Pode usar open_by_id se preferir
+
 # Exemplo de dados de teste
-dados_para_enviar_exemplo = {
-    "DataHora": "21/05/2025 às 19:36:06",
-    "Campo1": "Dado Teste 1",
-    "Campo2": "Dado Teste 2",
-    "Campo3": "Dado Teste 3",
-    "Campo4": "Dado Teste 4",
-    "Campo5": "..."
-}
+# Certifique-se de que o número de colunas aqui corresponde à sua planilha
+# O script anterior tinha 28 colunas (DataHora + 27 campos)
+dados_para_enviar_exemplo_lista = [datetime.now().strftime("%d/%m/%Y às %H:%M:%S")]
+for i in range(1, 28): # Para ter 28 colunas no total (DataHora + 27 campos)
+    dados_para_enviar_exemplo_lista.append(f"Dado Teste Moderno {i}")
+
+
 st.write("Dados de teste a serem enviados (primeiros 5 campos):")
-st.json(dict(list(dados_para_enviar_exemplo.items())[:5]))
+st.json(dados_para_enviar_exemplo_lista[:5] + ["..."])
 
 
 if st.button("🚀 Enviar Dados de Teste para Google Sheets"):
     client = get_gsheets_client()
     if client:
         try:
-            # Substitua pelo nome da sua planilha e ID da pasta, se necessário
-            # ou pelo ID da planilha se você já o tiver.
-            # planilha_completa = client.open_by_key("SEU_SHEET_ID_AQUI")
-            planilha_completa = client.open(title="BaseDadosChat", folder_id="1GNJ9tm1cJsAZJMi9sy-vakdmBoJigkMI") # Use o seu folder_id e title
-            planilha = planilha_completa.get_worksheet(0) # Pega a primeira aba
+            # Abrir por título, como funcionou no seu teste
+            planilha_completa = client.open(title=SPREADSHEET_TITLE)
+            # Ou por ID, que é geralmente mais robusto se você tiver o ID:
+            # planilha_completa = client.open_by_id(SPREADSHEET_ID)
+            
+            planilha = planilha_completa.worksheet(WORKSHEET_NAME) 
 
-            # Defina os dados que você quer enviar
-            # IMPORTANTE: Os nomes das chaves aqui devem corresponder aos seus cabeçalhos na planilha
-            # ou você precisará enviar uma lista de valores na ordem correta das colunas.
-            # Para este exemplo, vamos supor que a planilha espera os valores na ordem.
-            linha_para_adicionar = [
-                dados_para_enviar_exemplo["DataHora"],
-                dados_para_enviar_exemplo["Campo1"],
-                dados_para_enviar_exemplo["Campo2"],
-                dados_para_enviar_exemplo["Campo3"],
-                dados_para_enviar_exemplo["Campo4"],
-                dados_para_enviar_exemplo["Campo5"]
-            ]
-            planilha.append_row(linha_para_adicionar)
+            planilha.append_row(dados_para_enviar_exemplo_lista, value_input_option='USER_ENTERED')
             st.success("Dados enviados com sucesso para a planilha!")
             st.balloons()
 
         except gspread.exceptions.SpreadsheetNotFound:
-            st.error("Planilha não encontrada! Verifique o título, folder_id ou se a conta de serviço tem permissão.")
+            st.error(f"Planilha '{SPREADSHEET_TITLE}' não encontrada! Verifique o título ou se a conta de serviço tem permissão.")
+        except gspread.exceptions.WorksheetNotFound:
+            st.error(f"Aba '{WORKSHEET_NAME}' não encontrada na planilha '{SPREADSHEET_TITLE}'.")
         except gspread.exceptions.APIError as e:
             st.error(f"Erro de API do Google Sheets: {e}")
         except Exception as e:
             st.error(f"Ocorreu um erro ao enviar os dados: {e}")
+    else:
+        st.error("Falha ao inicializar o cliente Google Sheets. Verifique os erros de autenticação.")
 
 st.markdown("---")
-st.subheader("Verificações:")
+st.subheader("Verificações de Segredos:")
 try:
-    st.secrets["gsheets_creds"]
+    creds_check = st.secrets["gsheets_creds"]
     st.success("✅ Seção `[gsheets_creds]` encontrada em `secrets.toml`.")
+    st.write("Email da conta de serviço (do secrets.toml): ", creds_check.get("client_email", "Não encontrado"))
 except KeyError:
     st.error("❌ Seção `[gsheets_creds]` NÃO encontrada em `secrets.toml`.")
+except Exception as e:
+    st.error(f"Erro ao acessar st.secrets: {e}")
