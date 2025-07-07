@@ -101,7 +101,8 @@ Olá! 👋 Meu nome é **Colpi**, seu assistente virtual do Grupo de Certificaç
 Este é um espaço seguro e confidencial para que todas as vozes sejam ouvidas.
 
 🚨 **Atenção:** Este canal é dedicado a assuntos operacionais e do dia a dia.
-Para denúncias (assédio, corrupção, etc.), utilize nosso canal de denúncias exclusivo: 📲 `QRcode XXXXXXXXXXXXXX`.
+Para denúncias (assédio, corrupção, etc.), utilize nosso canal de denúncias exclusivo: 📲 0800 800 1272.
+https://contatoseguro.com.br/asperbrasbrasil.
 """
 
 # --- INÍCIO DO QUESTIONS_DATA (COPIE SEU QUESTIONS_DATA ORIGINAL E COMPLETO AQUI) ---
